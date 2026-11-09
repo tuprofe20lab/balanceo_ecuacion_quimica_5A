@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TuProfe20 Lab: Balanceo de Ecuaciones</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- KaTeX -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap');
+        
+        body { margin: 0; padding: 0; overflow: hidden; width: 100vw; height: 100dvh; user-select: none; }
+        .font-fun { font-family: 'Nunito', sans-serif; }
+        
+        @keyframes floatUp { 
+            0% { transform: translateY(105vh) rotate(0deg); } 
+            100% { transform: translateY(-105vh) rotate(360deg); } 
+        }
+        @keyframes slideInRight { 
+            0% { opacity: 0; transform: translateX(15px); } 
+            100% { opacity: 1; transform: translateX(0); } 
+        }
+        @keyframes fadeInScale {
+            0% { opacity: 0; transform: scale(0.9); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+        @keyframes confettiExplosion { 
+            0% { transform: translate(0, 0) scale(1) rotate(0deg); opacity: 1; } 
+            80% { opacity: 1; } 
+            100% { transform: translate(var(--tx), var(--ty)) scale(0) rotate(var(--rot)); opacity: 0; } 
+        }
+        @keyframes jellyPop {
+            0% { transform: scale3d(.3, .3, .3); opacity: 0; }
+            20% { transform: scale3d(1.18, 1.18, 1.18); }
+            40% { transform: scale3d(.92, .92, .92); }
+            60% { transform: scale3d(1.06, 1.06, 1.06); opacity: 1; }
+            80% { transform: scale3d(.97, .97, .97); }
+            100% { transform: scale3d(1, 1, 1); opacity: 1; }
+        }
+        @keyframes robotFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+        @keyframes robotThinkTilt { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(6deg) translateY(-3px); } }
+        @keyframes robotJump { 0%, 100% { transform: translateY(0); } 30% { transform: translateY(-15px); } }
+        @keyframes robotTalkArmL { 0%, 100% { transform: rotate(45deg); } 50% { transform: rotate(95deg); } }
+        @keyframes robotTalkArmR { 0%, 100% { transform: rotate(-45deg); } 50% { transform: rotate(-95deg); } }
+
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+        .animate-floatUp { animation: floatUp linear infinite; }
+        .animate-slideInRight { animation: slideInRight 0.3s ease-out forwards; }
+        .animate-fadeInScale { animation: fadeInScale 0.4s ease-out forwards; }
+        .animate-confettiExplosion { animation: confettiExplosion 1.8s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
+        .animate-jellyPop { animation: jellyPop 0.55s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        .animate-robotFloat { animation: robotFloat 3s ease-in-out infinite; }
+        .animate-robotThinkTilt { animation: robotThinkTilt 2s ease-in-out infinite; }
+        .animate-robotJump { animation: robotJump 1s cubic-bezier(0.28, 0.84, 0.42, 1) infinite; }
+        .animate-robotTalkArmL { animation: robotTalkArmL 0.6s ease-in-out infinite; }
+        .animate-robotTalkArmR { animation: robotTalkArmR 0.6s ease-in-out infinite 0.1s; }
+
+        .katex { font-weight: 900 !important; }
+        .katex-display { margin: 0 !important; padding: 0 !important; }
+        
+        .math-card .katex { font-size: clamp(0.9rem, 1.8vw, 1.25rem) !important; color: #1e293b !important; }
+        .math-enunciado .katex { font-size: clamp(1rem, 2vw, 1.4rem) !important; color: #ffffff !important; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+        .math-current .katex { font-size: clamp(1rem, 2.5vw, 2.2rem) !important; color: #0f172a !important; }
+        .math-history .katex { font-size: clamp(0.9rem, 2vw, 1.6rem) !important; color: #475569 !important; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef, memo } = React;
+
+        const Icon = ({ paths, className = "", size = 24, fill = "none", strokeWidth = "2.5" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill={fill} stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className} dangerouslySetInnerHTML={{__html: paths}} />
+        );
+
+        const VolumeX = (p) => <Icon {...p} paths='<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/>' />;
+        const Volume2 = (p) => <Icon {...p} paths='<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>' />;
+        const Rocket = (p) => <Icon {...p} paths='<path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/>' />;
+        const Sparkles = (p) => <Icon {...p} paths='<path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M3 5h4"/><path d="M19 3v4"/><path d="M17 5h4"/>' />;
+        const Home = (p) => <Icon {...p} paths='<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>' />;
+        const ChevronLeft = (p) => <Icon {...p} paths='<polyline points="15 18 9 12 15 6"/>' />;
+        const ChevronRight = (p) => <Icon {...p} paths='<polyline points="9 18 15 12 9 6"/>' />;
+        const Activity = (p) => <Icon {...p} paths='<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>' />;
+
+        const AudioController = {
+            ctx: null, muted: false, bgmNode: null,
+            init: function() {
+                if (this.ctx) return;
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (AudioContext) this.ctx = new AudioContext();
+            },
+            startBGM: function() {
+                if (!this.ctx) return;
+                if (this.ctx.state === 'suspended') this.ctx.resume().catch(() => {});
+                if (this.bgmNode) return;
+                const mainGain = this.ctx.createGain();
+                mainGain.gain.value = this.muted ? 0 : 0.035;
+                const filter = this.ctx.createBiquadFilter();
+                filter.type = 'lowpass'; filter.frequency.value = 1500;
+                filter.connect(mainGain); mainGain.connect(this.ctx.destination);
+                this.bgmNode = { mainGain, filter };
+                const melody = [67, null, 71, 74, 76, null, 74, 71, 64, null, 67, 71, 74, null, 71, 67, 60, null, 64, 67, 72, null, 67, 64, 62, null, 66, 69, 74, null, 69, 66];
+                const roots = [43, 40, 36, 38];
+                const note = (midi, time, duration, level, type) => {
+                    const osc = this.ctx.createOscillator(); const gain = this.ctx.createGain();
+                    osc.type = type; osc.frequency.value = 440 * Math.pow(2, (midi - 69) / 12);
+                    gain.gain.setValueAtTime(0, time); gain.gain.linearRampToValueAtTime(level, time + 0.025); gain.gain.exponentialRampToValueAtTime(0.001, time + duration);
+                    osc.connect(gain); gain.connect(filter);
+                    osc.onended = () => { osc.disconnect(); gain.disconnect(); };
+                    osc.start(time); osc.stop(time + duration + 0.03);
+                };
+                let beat = 0; let nextTime = this.ctx.currentTime + 0.06;
+                const schedule = () => {
+                    if (this.ctx.state !== 'running') return;
+                    if (nextTime < this.ctx.currentTime) nextTime = this.ctx.currentTime + 0.04;
+                    while (nextTime < this.ctx.currentTime + 0.18) {
+                        const index = beat % melody.length;
+                        if (melody[index] !== null) note(melody[index], nextTime, 0.3, 0.32, 'triangle');
+                        if (index % 4 === 0) note(roots[Math.floor(index / 8)], nextTime, 1.1, 0.35, 'sine');
+                        beat++; nextTime += 60 / 80 / 2;
+                    }
+                };
+                schedule(); this.bgmNode.timer = setInterval(schedule, 60);
+            },
+            play: function(type) {
+                if (this.muted || !this.ctx) return;
+                if (this.ctx.state === 'suspended') this.ctx.resume();
+                const osc = this.ctx.createOscillator(); const gain = this.ctx.createGain();
+                osc.connect(gain); gain.connect(this.ctx.destination);
+                const now = this.ctx.currentTime;
+                if (type === 'pop') {
+                    osc.type = 'sine'; osc.frequency.setValueAtTime(500, now); osc.frequency.exponentialRampToValueAtTime(800, now + 0.1);
+                    gain.gain.setValueAtTime(0.25, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                    osc.start(now); osc.stop(now + 0.1);
+                } else if (type === 'pop-reverse') {
+                    osc.type = 'triangle'; osc.frequency.setValueAtTime(650, now); osc.frequency.exponentialRampToValueAtTime(280, now + 0.12);
+                    gain.gain.setValueAtTime(0.2, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+                    osc.start(now); osc.stop(now + 0.12);
+                } else if (type === 'success') {
+                    osc.disconnect(); const notes = [523.25, 659.25, 783.99, 1046.50];
+                    notes.forEach((freq, i) => {
+                        const o = this.ctx.createOscillator(); const g = this.ctx.createGain();
+                        o.type = 'triangle'; o.frequency.value = freq;
+                        o.connect(g); g.connect(this.ctx.destination);
+                        const startTime = now + (i * 0.07);
+                        g.gain.setValueAtTime(0, startTime); g.gain.linearRampToValueAtTime(0.2, startTime + 0.04); g.gain.linearRampToValueAtTime(0, startTime + 0.35);
+                        o.start(startTime); o.stop(startTime + 0.35);
+                    });
+                } else if (type === 'swoosh') {
+                    osc.type = 'sine'; osc.frequency.setValueAtTime(280, now); osc.frequency.exponentialRampToValueAtTime(70, now + 0.18);
+                    gain.gain.setValueAtTime(0.2, now); gain.gain.linearRampToValueAtTime(0.01, now + 0.18);
+                    osc.start(now); osc.stop(now + 0.18);
+                }
+            },
+            toggleMute: function() { 
+                this.muted = !this.muted; 
+                if (this.bgmNode) this.bgmNode.mainGain.gain.setTargetAtTime(this.muted ? 0 : 0.035, this.ctx.currentTime, 0.1);
+                return this.muted; 
+            }
+        };
+
+        const MathDisplay = memo(({ latex, className = "", inline = false }) => {
+            const containerRef = useRef(null);
+            useEffect(() => {
+                if (containerRef.current && window.katex) {
+                    try { window.katex.render(latex, containerRef.current, { displayMode: !inline, throwOnError: false, strict: false, trust: true }); }
+                    catch (e) { containerRef.current.innerText = latex; }
+                }
+            }, [latex, inline]);
+            return inline ? <span ref={containerRef} className={`inline-block align-middle ${className}`} /> : <div className={`relative w-full flex justify-center ${className}`}><div ref={containerRef} className="w-full text-center" /></div>;
+        });
+
+        // PIZARRA INTACTA CON SOPORTE PARA TABLETA (Wacom, etc)
+        const DrawingCanvas = () => {
+            const canvasRef = useRef(null);
+            const [isDrawing, setIsDrawing] = useState(false);
+            const [isDrawMode, setIsDrawMode] = useState(false);
+            const [tool, setTool] = useState('pen');
+            const [isSnapMode, setIsSnapMode] = useState(false);
+            const [penColor, setPenColor] = useState('#ef4444');
+            const [penWidth, setPenWidth] = useState(6);
+            const penPointsRef = useRef([]);
+            const activePointerRef = useRef(null);
+            const savedImageRef = useRef(null);
+            const startPosRef = useRef({ x: 0, y: 0 });
+
+            const playPop = () => { AudioController.init(); AudioController.startBGM(); AudioController.play('pop'); };
+
+            useEffect(() => {
+                const canvas = canvasRef.current;
+                if (!canvas || !canvas.parentElement) return;
+                const updateSize = (entries) => {
+                    for (let entry of entries) {
+                        const { width, height } = entry.contentRect;
+                        const ctx = canvas.getContext('2d');
+                        let imgData = null;
+                        if (canvas.width > 0 && canvas.height > 0) {
+                            try { imgData = ctx.getImageData(0, 0, canvas.width, canvas.height); } catch (e) {}
+                        }
+                        canvas.width = width; canvas.height = height;
+                        if (imgData) ctx.putImageData(imgData, 0, 0);
+                    }
+                };
+                const observer = new ResizeObserver(updateSize);
+                observer.observe(canvas.parentElement);
+                return () => observer.disconnect();
+            }, []);
+
+            const hexToRgba = (hex, alpha) => {
+                const r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
+                return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+            };
+
+            const renderPen = (points, straight = false) => {
+                const ctx = canvasRef.current.getContext('2d');
+                ctx.putImageData(savedImageRef.current, 0, 0);
+                const angle = -15 * Math.PI / 180;
+                const c = Math.cos(angle), s = Math.sin(angle);
+                const local = points.map(p => ({ x: c * p.x + s * p.y, y: (-s * p.x + c * p.y) / 0.5 }));
+                ctx.save();
+                ctx.transform(c, s, -0.5 * s, 0.5 * c, 0, 0);
+                ctx.lineWidth = penWidth; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+                ctx.strokeStyle = penColor; ctx.fillStyle = penColor; ctx.globalCompositeOperation = 'source-over';
+                ctx.beginPath(); ctx.moveTo(local[0].x, local[0].y);
+                if (local.length === 1) {
+                    ctx.arc(local[0].x, local[0].y, penWidth / 2, 0, Math.PI * 2); ctx.fill();
+                } else {
+                    if (!straight) {
+                        for (let i = 1; i < local.length - 1; i++) {
+                            const midpoint = { x: (local[i].x + local[i + 1].x) / 2, y: (local[i].y + local[i + 1].y) / 2 };
+                            ctx.quadraticCurveTo(local[i].x, local[i].y, midpoint.x, midpoint.y);
+                        }
+                    }
+                    const last = local[local.length - 1];
+                    ctx.lineTo(last.x, last.y); ctx.stroke();
+                }
+                ctx.restore();
+            };
+
+            const startDrawing = (e) => {
+                if (!isDrawMode || activePointerRef.current !== null || (e.pointerType === 'mouse' && e.button !== 0)) return;
+                const canvas = canvasRef.current; const ctx = canvas.getContext('2d'); const rect = canvas.getBoundingClientRect();
+                ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+                if (tool === 'highlighter') {
+                    ctx.lineWidth = 24; ctx.strokeStyle = hexToRgba(penColor, 0.3); ctx.globalCompositeOperation = 'multiply';
+                } else {
+                    ctx.lineWidth = penWidth; ctx.strokeStyle = penColor; ctx.globalCompositeOperation = 'source-over';
+                }
+                const startX = e.clientX - rect.left, startY = e.clientY - rect.top;
+                savedImageRef.current = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                startPosRef.current = { x: startX, y: startY };
+                ctx.beginPath(); ctx.moveTo(startX, startY);
+                penPointsRef.current = [{ x: startX, y: startY }];
+                activePointerRef.current = e.pointerId; canvas.setPointerCapture(e.pointerId);
+                if (tool === 'pen') renderPen(penPointsRef.current);
+                setIsDrawing(true);
+            };
+
+            const draw = (e) => {
+                if (activePointerRef.current !== e.pointerId || !isDrawMode) return;
+                const canvas = canvasRef.current; const ctx = canvas.getContext('2d'); const rect = canvas.getBoundingClientRect();
+                const currentX = e.clientX - rect.left, currentY = e.clientY - rect.top;
+                if (isSnapMode || e.shiftKey) {
+                    ctx.putImageData(savedImageRef.current, 0, 0);
+                    const dx = currentX - startPosRef.current.x, dy = currentY - startPosRef.current.y;
+                    const angle = Math.atan2(dy, dx);
+                    const snappedAngle = Math.round(angle / (Math.PI / 4)) * (Math.PI / 4);
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    const snapX = startPosRef.current.x + Math.cos(snappedAngle) * dist, snapY = startPosRef.current.y + Math.sin(snappedAngle) * dist;
+                    if (tool === 'pen') { renderPen([startPosRef.current, { x: snapX, y: snapY }], true); return; }
+                    ctx.beginPath(); ctx.moveTo(startPosRef.current.x, startPosRef.current.y); ctx.lineTo(snapX, snapY); ctx.stroke();
+                } else {
+                    if (tool === 'pen') {
+                        const events = e.nativeEvent?.getCoalescedEvents?.() || [];
+                        const samples = events.length ? events : [e];
+                        samples.forEach(sample => penPointsRef.current.push({ x: sample.clientX - rect.left, y: sample.clientY - rect.top }));
+                        renderPen(penPointsRef.current); return;
+                    }
+                    if (tool === 'highlighter') ctx.putImageData(savedImageRef.current, 0, 0);
+                    ctx.lineTo(currentX, currentY); ctx.stroke();
+                }
+            };
+
+            const stopDrawing = () => {
+                const canvas = canvasRef.current; const pointer = activePointerRef.current;
+                activePointerRef.current = null;
+                if (pointer !== null && canvas.hasPointerCapture(pointer)) canvas.releasePointerCapture(pointer);
+                if (isDrawing) { canvas.getContext('2d').closePath(); setIsDrawing(false); }
+            };
+
+            const selectTool = (nextTool) => {
+                stopDrawing(); playPop();
+                const enabled = nextTool !== 'selector' && !(isDrawMode && tool === nextTool);
+                setIsDrawMode(enabled);
+                if (nextTool !== 'selector') setTool(nextTool);
+            };
+
+            useEffect(() => {
+                const onKey = (event) => {
+                    if (event.key === 'Escape') {
+                        const pointer = activePointerRef.current; activePointerRef.current = null;
+                        if (pointer !== null && canvasRef.current.hasPointerCapture(pointer)) canvasRef.current.releasePointerCapture(pointer);
+                        setIsDrawing(false); setIsDrawMode(false);
+                    }
+                };
+                window.addEventListener('keydown', onKey);
+                return () => window.removeEventListener('keydown', onKey);
+            }, []);
+
+            const clearCanvas = () => {
+                playPop(); const canvas = canvasRef.current; const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            };
+
+            const colors = [
+                { name: 'Rojo', hex: '#ef4444', tw: 'bg-[#ef4444]' }, { name: 'Negro', hex: '#0f172a', tw: 'bg-[#0f172a]' },
+                { name: 'Azul', hex: '#3b82f6', tw: 'bg-[#3b82f6]' }, { name: 'Verde', hex: '#22c55e', tw: 'bg-[#22c55e]' }, { name: 'Amarillo', hex: '#facc15', tw: 'bg-[#facc15]' }
+            ];
+
+            return (
+                <>
+                    <div style={{zIndex: 120, pointerEvents: 'auto'}} className="absolute top-2 right-2 z-[120] flex flex-wrap max-w-[calc(100%-1rem)] justify-end gap-2 pointer-events-auto bg-white/80 p-1.5 rounded-xl backdrop-blur-sm shadow-md border border-slate-200">
+                        <button onClick={() => selectTool('selector')} aria-pressed={!isDrawMode} title="Seleccionar e interactuar (Esc)" className={`px-3 py-1.5 text-xs sm:text-sm font-black rounded-lg border-2 shadow-sm transition-all ${!isDrawMode ? 'bg-cyan-500 text-white border-cyan-600' : 'bg-white text-slate-600 border-slate-300'}`}>🖱️ Selector</button>
+                        <button onClick={() => selectTool('pen')} className={`px-3 py-1.5 text-xs sm:text-sm font-black rounded-lg border-2 shadow-sm transition-all ${isDrawMode && tool === 'pen' ? 'bg-indigo-500 text-white border-indigo-600 scale-105' : 'bg-white text-slate-600 border-slate-300'}`} aria-pressed={isDrawMode && tool === 'pen'} title="Lápiz Normal">🖊️ Lápiz</button>
+                        <button onClick={() => selectTool('highlighter')} aria-pressed={isDrawMode && tool === 'highlighter'} className={`px-3 py-1.5 text-xs sm:text-sm font-black rounded-lg border-2 shadow-sm transition-all ${isDrawMode && tool === 'highlighter' ? 'bg-yellow-400 text-slate-900 border-yellow-500 scale-105' : 'bg-white text-slate-600 border-slate-300'}`} title="Resaltador">🖍️ Resaltador</button>
+                        {isDrawMode && tool === 'pen' && (
+                            <label className="flex items-center gap-2 px-2 py-1 rounded-lg bg-white border-2 border-indigo-200 text-xs font-black text-slate-700">
+                                Grosor <input aria-label="Grosor del lápiz" type="range" min="3" max="16" step="1" value={penWidth} onChange={e => setPenWidth(Number(e.target.value))} className="w-20 accent-indigo-600" /> <span className="w-9">{penWidth} px</span>
+                            </label>
+                        )}
+                        {isDrawMode && (
+                            <>
+                                <button onClick={() => { playPop(); setIsSnapMode(!isSnapMode); }} className={`px-3 py-1.5 text-xs sm:text-sm font-black rounded-lg border-2 shadow-sm transition-all ${isSnapMode ? 'bg-blue-500 text-white border-blue-600 scale-105' : 'bg-white text-slate-600 border-slate-300'}`} title="Trazar líneas rectas (también puedes mantener Shift)">📐 Recto</button>
+                                <button onClick={clearCanvas} className="px-3 py-1.5 text-xs sm:text-sm font-black bg-white text-rose-600 border-2 border-rose-300 rounded-lg shadow-sm hover:bg-rose-50 active:scale-95 transition-all">🗑️ Limpiar</button>
+                            </>
+                        )}
+                    </div>
+                    {isDrawMode && (
+                        <div className="absolute top-1/2 right-4 -translate-y-1/2 z-[110] flex flex-col gap-3 p-2 bg-white/90 backdrop-blur-md rounded-xl border-[3px] border-slate-200 shadow-xl pointer-events-auto">
+                            {colors.map(c => (
+                                <button key={c.hex} onClick={() => { playPop(); setPenColor(c.hex); }} className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full border-[3px] shadow-sm transition-all hover:scale-110 active:scale-95 ${c.tw} ${penColor === c.hex ? 'border-white outline outline-[3px] outline-slate-800 scale-110' : 'border-black/20'}`} title={`Color ${c.name}`} />
+                            ))}
+                        </div>
+                    )}
+                    <canvas ref={canvasRef} style={{ zIndex: 100, pointerEvents: isDrawMode ? 'auto' : 'none', touchAction: isDrawMode ? 'none' : 'auto' }} className={`absolute inset-0 z-[100] touch-none ${isDrawMode ? 'cursor-crosshair pointer-events-auto' : 'pointer-events-none'}`} onPointerDown={startDrawing} onPointerMove={draw} onPointerUp={e => { if (activePointerRef.current === e.pointerId) { draw(e); stopDrawing(); } }} onPointerLeave={e => { if (!e.currentTarget.hasPointerCapture(e.pointerId)) stopDrawing(); }} onLostPointerCapture={stopDrawing} onPointerCancel={stopDrawing} />
+                </>
+            );
+        };
+
+        // TABLA DE BALANCE DE ÁTOMOS (REEMPLAZA A NUMBERLINE)
+        const AtomBalance = memo(({ config }) => {
+            if (!config) return (
+                <div className="w-full h-full min-h-[200px] flex flex-col items-center justify-center text-slate-300 opacity-60">
+                    <Activity className="w-16 h-16 mb-2" />
+                    <p className="font-bold text-center text-lg">La tabla de átomos<br/>aparecerá aquí...</p>
+                </div>
+            );
+
+            return (
+                <div className="w-full max-w-sm mx-auto my-2 animate-fadeInScale">
+                    <div className="flex justify-between items-center bg-slate-800 text-white rounded-t-xl px-6 py-3 font-black shadow-md">
+                        <span className="text-cyan-300 text-sm sm:text-base">Reactantes</span>
+                        <span className="text-slate-400 text-xs">vs</span>
+                        <span className="text-pink-300 text-sm sm:text-base">Productos</span>
+                    </div>
+                    <div className="flex flex-col bg-white border-2 border-t-0 border-slate-800 rounded-b-xl overflow-hidden shadow-lg">
+                        {config.atoms.map((a, i) => {
+                            const isBal = a.left === a.right;
+                            return (
+                                <div key={i} className={`flex justify-between items-center px-6 py-3 border-b border-slate-100 transition-all ${isBal ? 'bg-emerald-50' : 'bg-white'}`}>
+                                    <span className={`text-xl sm:text-2xl font-black w-8 text-center ${isBal ? 'text-emerald-600' : 'text-slate-700'}`}>{a.left}</span>
+                                    <span className={`text-2xl sm:text-3xl font-black ${isBal ? 'text-emerald-500 scale-110 drop-shadow-sm' : 'text-slate-300'}`}>{a.symbol}</span>
+                                    <span className={`text-xl sm:text-2xl font-black w-8 text-center ${isBal ? 'text-emerald-600' : 'text-slate-700'}`}>{a.right}</span>
+                                </div>
+                            )
+                        })}
+                    </div>
+                    {config.message && (
+                        <div className="mt-4 bg-yellow-100 border-[3px] border-yellow-300 text-yellow-800 px-4 py-2 rounded-xl font-bold text-center animate-jellyPop shadow-sm text-sm sm:text-base">
+                            {config.message}
+                        </div>
+                    )}
+                </div>
+            );
+        });
+
+        // 18 EJERCICIOS DEL PDF
+        const EXERCISES = [
+            { id: 1, title: "Ejercicio 1", subtitle: "Tanteo - Suma Prod.",
+              cardGradient: "from-blue-500/30 to-cyan-600/30 border-blue-400", badgeColor: "bg-blue-500",
+              enunciado: () => <span>Luego de balancear por tanteo, halla la suma de los coeficientes de los productos: <MathDisplay inline latex="Al_4C_3 + H_2O \rightarrow CH_4 + Al_2O_3" /></span>,
+              steps: [
+                  { latex: String.raw`Al_4C_3 + H_2O \rightarrow CH_4 + Al_2O_3`, propertyText: "Ecuación Base", robotSpeech: "Empezamos balanceando el metal (Aluminio).", graphic: { atoms: [{symbol:'Al', left:4, right:2}, {symbol:'C', left:3, right:1}, {symbol:'H', left:2, right:4}, {symbol:'O', left:1, right:3}] } },
+                  { latex: String.raw`Al_4C_3 + H_2O \rightarrow \mathbf{3}CH_4 + \mathbf{2}Al_2O_3`, propertyText: "Metal y No metal", robotSpeech: "Colocamos 2 al óxido para balancear el Al y 3 al metano para el C.", graphic: { atoms: [{symbol:'Al', left:4, right:4}, {symbol:'C', left:3, right:3}, {symbol:'H', left:2, right:12}, {symbol:'O', left:1, right:6}] } },
+                  { latex: String.raw`Al_4C_3 + \mathbf{6}H_2O \rightarrow 3CH_4 + 2Al_2O_3`, propertyText: "Hidrógeno y Oxígeno", robotSpeech: "Con un 6 en el agua logramos 12 H y 6 O en los reactantes, igualando ambos lados.", graphic: { atoms: [{symbol:'Al', left:4, right:4}, {symbol:'C', left:3, right:3}, {symbol:'H', left:12, right:12}, {symbol:'O', left:6, right:6}], message: "¡Ecuación Balanceada!" } },
+                  { latex: String.raw`\Sigma_{prod} = 3 + 2 = \mathbf{5}`, propertyText: "Suma de Productos", robotSpeech: "La suma de los coeficientes de los productos es 5.", graphic: { atoms: [{symbol:'Al', left:4, right:4}, {symbol:'C', left:3, right:3}, {symbol:'H', left:12, right:12}, {symbol:'O', left:6, right:6}], message: "Suma final = 5" } }
+              ]
+            },
+            { id: 2, title: "Ejercicio 2", subtitle: "Coeficiente de Agua",
+              cardGradient: "from-purple-500/30 to-fuchsia-600/30 border-purple-400", badgeColor: "bg-purple-500",
+              enunciado: () => <span>Balancear y dar como respuesta el coeficiente del agua: <MathDisplay inline latex="H_3PO_4 + Bi(OH)_5 \rightarrow Bi_3(PO_4)_5 + H_2O" /></span>,
+              steps: [
+                  { latex: String.raw`H_3PO_4 + Bi(OH)_5 \rightarrow Bi_3(PO_4)_5 + H_2O`, propertyText: "Ecuación Base", robotSpeech: "Primero equilibramos el metal (Bi) y el no metal (P).", graphic: { atoms: [{symbol:'Bi', left:1, right:3}, {symbol:'P', left:1, right:5}, {symbol:'H', left:8, right:2}, {symbol:'O', left:9, right:21}] } },
+                  { latex: String.raw`\mathbf{5}H_3PO_4 + \mathbf{3}Bi(OH)_5 \rightarrow Bi_3(PO_4)_5 + H_2O`, propertyText: "Fosfato y Bismuto", robotSpeech: "Necesitamos 5 moléculas de ácido y 3 de hidróxido.", graphic: { atoms: [{symbol:'Bi', left:3, right:3}, {symbol:'P', left:5, right:5}, {symbol:'H', left:30, right:2}, {symbol:'O', left:35, right:21}] } },
+                  { latex: String.raw`5H_3PO_4 + 3Bi(OH)_5 \rightarrow Bi_3(PO_4)_5 + \mathbf{15}H_2O`, propertyText: "Ajuste Final", robotSpeech: "Ahora hay 30 H en reactantes, colocamos 15 al agua. El coeficiente buscado es 15.", graphic: { atoms: [{symbol:'Bi', left:3, right:3}, {symbol:'P', left:5, right:5}, {symbol:'H', left:30, right:30}, {symbol:'O', left:35, right:35}], message: "Coeficiente del H2O = 15" } }
+              ]
+            },
+            { id: 3, title: "Ejercicio 3", subtitle: "Combustión",
+              cardGradient: "from-rose-500/30 to-pink-600/30 border-rose-400", badgeColor: "bg-rose-500",
+              enunciado: () => <span>Balancee, luego indique el coeficiente del <MathDisplay inline latex="O_2" />: <MathDisplay inline latex="C_6H_6 + O_2 \rightarrow CO_2 + H_2O" /></span>,
+              steps: [
+                  { latex: String.raw`C_6H_6 + O_2 \rightarrow \mathbf{6}CO_2 + \mathbf{3}H_2O`, propertyText: "Carbono e Hidrógeno", robotSpeech: "Ajustamos C y H directamente en los productos.", graphic: { atoms: [{symbol:'C', left:6, right:6}, {symbol:'H', left:6, right:6}, {symbol:'O', left:2, right:15}] } },
+                  { latex: String.raw`C_6H_6 + \mathbf{\frac{15}{2}}O_2 \rightarrow 6CO_2 + 3H_2O`, propertyText: "Coef. Fraccionario", robotSpeech: "Como hay 15 oxígenos a la derecha, el coeficiente es 15/2.", graphic: { atoms: [{symbol:'C', left:6, right:6}, {symbol:'H', left:6, right:6}, {symbol:'O', left:15, right:15}] } },
+                  { latex: String.raw`\mathbf{2}C_6H_6 + \mathbf{15}O_2 \rightarrow \mathbf{12}CO_2 + \mathbf{6}H_2O`, propertyText: "Todo por 2", robotSpeech: "Multiplicamos por 2 para tener coeficientes enteros. El coeficiente de O2 es 15.", graphic: { atoms: [{symbol:'C', left:12, right:12}, {symbol:'H', left:12, right:12}, {symbol:'O', left:30, right:30}], message: "Coeficiente O2 = 15" } }
+              ]
+            },
+            { id: 4, title: "Ejercicio 4", subtitle: "Reducción",
+              cardGradient: "from-amber-500/30 to-orange-600/30 border-amber-400", badgeColor: "bg-amber-500",
+              enunciado: () => <span>Determine la suma del coeficiente del CO con el coeficiente del <MathDisplay inline latex="CO_2" />: <MathDisplay inline latex="Fe_2O_3 + CO \rightarrow Fe + CO_2" /></span>,
+              steps: [
+                  { latex: String.raw`Fe_2O_3 + CO \rightarrow \mathbf{2}Fe + CO_2`, propertyText: "Metal (Hierro)", robotSpeech: "Balanceamos primero los átomos de hierro.", graphic: { atoms: [{symbol:'Fe', left:2, right:2}, {symbol:'C', left:1, right:1}, {symbol:'O', left:4, right:2}] } },
+                  { latex: String.raw`Fe_2O_3 + \mathbf{3}CO \rightarrow 2Fe + \mathbf{3}CO_2`, propertyText: "Carbono y Oxígeno", robotSpeech: "Igualamos oxígenos colocando un 3 en los gases CO y CO2.", graphic: { atoms: [{symbol:'Fe', left:2, right:2}, {symbol:'C', left:3, right:3}, {symbol:'O', left:6, right:6}] } },
+                  { latex: String.raw`\Sigma_{CO, CO2} = 3 + 3 = \mathbf{6}`, propertyText: "Respuesta", robotSpeech: "La suma de los coeficientes de CO y CO2 es 6.", graphic: { atoms: [{symbol:'Fe', left:2, right:2}, {symbol:'C', left:3, right:3}, {symbol:'O', left:6, right:6}], message: "Suma CO + CO2 = 6" } }
+              ]
+            },
+            { id: 5, title: "Ejercicio 5", subtitle: "Variables",
+              cardGradient: "from-lime-500/30 to-green-600/30 border-lime-400", badgeColor: "bg-lime-500",
+              enunciado: () => <span>Determine el coeficiente del <MathDisplay inline latex="O_2" />: <MathDisplay inline latex="C_XH_{2X} + O_2 \rightarrow CO_2 + H_2O" /></span>,
+              steps: [
+                  { latex: String.raw`C_XH_{2X} + O_2 \rightarrow \mathbf{X}CO_2 + \mathbf{X}H_2O`, propertyText: "C y H con variables", robotSpeech: "Balanceamos asumiendo X cantidad de Carbonos y 2X Hidrógenos.", graphic: { atoms: [{symbol:'C', left:'X', right:'X'}, {symbol:'H', left:'2X', right:'2X'}, {symbol:'O', left:2, right:'3X'}] } },
+                  { latex: String.raw`\mathbf{2}C_XH_{2X} + \mathbf{3X}O_2 \rightarrow \mathbf{2X}CO_2 + \mathbf{2X}H_2O`, propertyText: "Eliminando fracciones", robotSpeech: "Para evitar la fracción 3X/2, multiplicamos todo por 2. El coeficiente del O2 es 3X.", graphic: { atoms: [{symbol:'C', left:'2X', right:'2X'}, {symbol:'H', left:'4X', right:'4X'}, {symbol:'O', left:'6X', right:'6X'}], message: "Coeficiente = 3X" } }
+              ]
+            },
+            { id: 6, title: "Ejercicio 6", subtitle: "Cerillos",
+              cardGradient: "from-pink-500/30 to-rose-600/30 border-pink-400", badgeColor: "bg-pink-500",
+              enunciado: () => <span>Luego de balancear la ecuación, indique la suma de coeficientes: <MathDisplay inline latex="P_4S_3 + O_2 \rightarrow P_4O_{10} + SO_2" /></span>,
+              steps: [
+                  { latex: String.raw`P_4S_3 + O_2 \rightarrow P_4O_{10} + SO_2`, propertyText: "Fósforo", robotSpeech: "El fósforo (P) ya está balanceado temporalmente, pasemos al Azufre.", graphic: { atoms: [{symbol:'P', left:4, right:4}, {symbol:'S', left:3, right:1}, {symbol:'O', left:2, right:12}] } },
+                  { latex: String.raw`P_4S_3 + O_2 \rightarrow P_4O_{10} + \mathbf{3}SO_2`, propertyText: "Azufre", robotSpeech: "Colocamos 3 al SO2 para igualar el azufre.", graphic: { atoms: [{symbol:'P', left:4, right:4}, {symbol:'S', left:3, right:3}, {symbol:'O', left:2, right:16}] } },
+                  { latex: String.raw`P_4S_3 + \mathbf{8}O_2 \rightarrow P_4O_{10} + 3SO_2`, propertyText: "Oxígeno", robotSpeech: "Tenemos 16 átomos de oxígeno a la derecha, por lo que ponemos un 8 al O2. Suma: 1+8+1+3 = 13.", graphic: { atoms: [{symbol:'P', left:4, right:4}, {symbol:'S', left:3, right:3}, {symbol:'O', left:16, right:16}], message: "Suma total = 13" } }
+              ]
+            },
+            { id: 7, title: "Ejercicio 7", subtitle: "Tanteo Básico I",
+              cardGradient: "from-blue-600/30 to-indigo-700/30 border-blue-500", badgeColor: "bg-blue-600",
+              enunciado: () => <span>Balancea la siguiente ecuación química: <MathDisplay inline latex="H_2 + O_2 \rightarrow H_2O" /></span>,
+              steps: [
+                  { latex: String.raw`H_2 + O_2 \rightarrow \mathbf{2}H_2O`, propertyText: "Oxígeno", robotSpeech: "Igualamos el oxígeno poniendo un 2 al agua.", graphic: { atoms: [{symbol:'H', left:2, right:4}, {symbol:'O', left:2, right:2}] } },
+                  { latex: String.raw`\mathbf{2}H_2 + O_2 \rightarrow 2H_2O`, propertyText: "Hidrógeno", robotSpeech: "Finalmente, ponemos un 2 al hidrógeno molecular. ¡Listo!", graphic: { atoms: [{symbol:'H', left:4, right:4}, {symbol:'O', left:2, right:2}], message: "Balanceada" } }
+              ]
+            },
+            { id: 8, title: "Ejercicio 8", subtitle: "Tanteo Básico II",
+              cardGradient: "from-indigo-500/30 to-violet-600/30 border-indigo-400", badgeColor: "bg-indigo-500",
+              enunciado: () => <span>Balancea la síntesis del amoniaco: <MathDisplay inline latex="N_2 + H_2 \rightarrow NH_3" /></span>,
+              steps: [
+                  { latex: String.raw`N_2 + H_2 \rightarrow \mathbf{2}NH_3`, propertyText: "Nitrógeno", robotSpeech: "Balanceamos el nitrógeno colocando un 2 en el amoniaco.", graphic: { atoms: [{symbol:'N', left:2, right:2}, {symbol:'H', left:2, right:6}] } },
+                  { latex: String.raw`N_2 + \mathbf{3}H_2 \rightarrow 2NH_3`, propertyText: "Hidrógeno", robotSpeech: "Colocamos un 3 en el hidrógeno diatómico. Suma de coef = 6.", graphic: { atoms: [{symbol:'N', left:2, right:2}, {symbol:'H', left:6, right:6}], message: "Balanceada" } }
+              ]
+            },
+            { id: 9, title: "Ejercicio 9", subtitle: "Descomposición",
+              cardGradient: "from-orange-500/30 to-amber-600/30 border-orange-400", badgeColor: "bg-orange-500",
+              enunciado: () => <span>Balancea la siguiente ecuación: <MathDisplay inline latex="KClO_3 \rightarrow KCl + O_2" /></span>,
+              steps: [
+                  { latex: String.raw`KClO_3 \rightarrow KCl + O_2`, propertyText: "Análisis", robotSpeech: "El K y Cl están balanceados, pero el oxígeno tiene 3 en reactantes y 2 en productos (MCM = 6).", graphic: { atoms: [{symbol:'K', left:1, right:1}, {symbol:'Cl', left:1, right:1}, {symbol:'O', left:3, right:2}] } },
+                  { latex: String.raw`\mathbf{2}KClO_3 \rightarrow \mathbf{2}KCl + \mathbf{3}O_2`, propertyText: "Cruce", robotSpeech: "Cruzamos los subíndices del oxígeno como coeficientes: 2 a la izquierda y 3 a la derecha.", graphic: { atoms: [{symbol:'K', left:2, right:2}, {symbol:'Cl', left:2, right:2}, {symbol:'O', left:6, right:6}], message: "Balanceada" } }
+              ]
+            },
+            { id: 10, title: "Ejercicio 10", subtitle: "Formación",
+              cardGradient: "from-teal-500/30 to-emerald-600/30 border-teal-400", badgeColor: "bg-teal-500",
+              enunciado: () => <span>Balancea la siguiente ecuación: <MathDisplay inline latex="SO_2 + O_2 \rightarrow SO_3" /></span>,
+              steps: [
+                  { latex: String.raw`SO_2 + O_2 \rightarrow SO_3`, propertyText: "Análisis", robotSpeech: "A la izquierda hay 4 oxígenos (2+2) y a la derecha 3. Usaremos coeficientes.", graphic: { atoms: [{symbol:'S', left:1, right:1}, {symbol:'O', left:4, right:3}] } },
+                  { latex: String.raw`\mathbf{2}SO_2 + O_2 \rightarrow \mathbf{2}SO_3`, propertyText: "Balanceo", robotSpeech: "Multiplicando SO2 y SO3 por 2, igualamos el S y logramos 6 oxígenos en cada lado.", graphic: { atoms: [{symbol:'S', left:2, right:2}, {symbol:'O', left:6, right:6}], message: "Balanceada" } }
+              ]
+            },
+            { id: 11, title: "Ejercicio 11", subtitle: "Calcina",
+              cardGradient: "from-yellow-500/30 to-amber-600/30 border-yellow-400", badgeColor: "bg-yellow-500",
+              enunciado: () => <span>Balancea la descomposición del carbonato de calcio: <MathDisplay inline latex="CaCO_3 \rightarrow CaO + CO_2" /></span>,
+              steps: [
+                  { latex: String.raw`CaCO_3 \rightarrow CaO + CO_2`, propertyText: "Comprobación directa", robotSpeech: "A veces la ecuación ya viene balanceada. Contemos los átomos en ambos lados.", graphic: { atoms: [{symbol:'Ca', left:1, right:1}, {symbol:'C', left:1, right:1}, {symbol:'O', left:3, right:3}] } },
+                  { latex: String.raw`\mathbf{1}CaCO_3 \rightarrow \mathbf{1}CaO + \mathbf{1}CO_2`, propertyText: "Conclusión", robotSpeech: "Los coeficientes son la unidad (1). La suma total es 3.", graphic: { atoms: [{symbol:'Ca', left:1, right:1}, {symbol:'C', left:1, right:1}, {symbol:'O', left:3, right:3}], message: "Balanceada desde el inicio" } }
+              ]
+            },
+            { id: 12, title: "Ejercicio 12", subtitle: "Óxido",
+              cardGradient: "from-red-500/30 to-rose-600/30 border-red-400", badgeColor: "bg-red-500",
+              enunciado: () => <span>Balancea la formación del óxido de sodio: <MathDisplay inline latex="Na + O_2 \rightarrow Na_2O" /></span>,
+              steps: [
+                  { latex: String.raw`Na + O_2 \rightarrow \mathbf{2}Na_2O`, propertyText: "Oxígeno", robotSpeech: "Primero aseguramos el oxígeno colocando un 2 al producto.", graphic: { atoms: [{symbol:'Na', left:1, right:4}, {symbol:'O', left:2, right:2}] } },
+                  { latex: String.raw`\mathbf{4}Na + O_2 \rightarrow 2Na_2O`, propertyText: "Sodio", robotSpeech: "Finalmente colocamos 4 al sodio. Balance rápido.", graphic: { atoms: [{symbol:'Na', left:4, right:4}, {symbol:'O', left:2, right:2}], message: "Balanceada" } }
+              ]
+            },
+            { id: 13, title: "Ejercicio 13", subtitle: "Monóxido",
+              cardGradient: "from-fuchsia-500/30 to-purple-600/30 border-fuchsia-400", badgeColor: "bg-fuchsia-500",
+              enunciado: () => <span>Balancea: <MathDisplay inline latex="C + O_2 \rightarrow CO" /></span>,
+              steps: [
+                  { latex: String.raw`C + O_2 \rightarrow \mathbf{2}CO`, propertyText: "Oxígeno", robotSpeech: "Falta O a la derecha, multiplicamos por 2 el monóxido.", graphic: { atoms: [{symbol:'C', left:1, right:2}, {symbol:'O', left:2, right:2}] } },
+                  { latex: String.raw`\mathbf{2}C + O_2 \rightarrow 2CO`, propertyText: "Carbono", robotSpeech: "Y completamos con 2 para el carbono reactante.", graphic: { atoms: [{symbol:'C', left:2, right:2}, {symbol:'O', left:2, right:2}], message: "Balanceada" } }
+              ]
+            },
+            { id: 14, title: "Ejercicio 14", subtitle: "Ácido + Metal",
+              cardGradient: "from-cyan-500/30 to-blue-600/30 border-cyan-400", badgeColor: "bg-cyan-500",
+              enunciado: () => <span>Balancea la reacción: <MathDisplay inline latex="Al + HI \rightarrow AlI_3 + H_2" /></span>,
+              steps: [
+                  { latex: String.raw`Al + \mathbf{3}HI \rightarrow AlI_3 + H_2`, propertyText: "Yodo", robotSpeech: "Igualamos el Yodo (I) poniendo un 3 al ácido.", graphic: { atoms: [{symbol:'Al', left:1, right:1}, {symbol:'I', left:3, right:3}, {symbol:'H', left:3, right:2}] } },
+                  { latex: String.raw`Al + 3HI \rightarrow AlI_3 + \mathbf{\frac{3}{2}}H_2`, propertyText: "Hidrógeno", robotSpeech: "Como hay 3 H a la izquierda, ponemos 3/2 a la derecha.", graphic: { atoms: [{symbol:'Al', left:1, right:1}, {symbol:'I', left:3, right:3}, {symbol:'H', left:3, right:3}] } },
+                  { latex: String.raw`\mathbf{2}Al + \mathbf{6}HI \rightarrow \mathbf{2}AlI_3 + \mathbf{3}H_2`, propertyText: "Enteros", robotSpeech: "Multiplicamos todo por 2.", graphic: { atoms: [{symbol:'Al', left:2, right:2}, {symbol:'I', left:6, right:6}, {symbol:'H', left:6, right:6}], message: "Balanceada" } }
+              ]
+            },
+            { id: 15, title: "Ejercicio 15", subtitle: "Ácido + Plomo",
+              cardGradient: "from-lime-500/30 to-green-600/30 border-lime-400", badgeColor: "bg-lime-500",
+              enunciado: () => <span>Balancea la ecuación: <MathDisplay inline latex="Pb + HI \rightarrow I_2 + PbH_2" /></span>,
+              steps: [
+                  { latex: String.raw`Pb + HI \rightarrow I_2 + PbH_2`, propertyText: "Análisis", robotSpeech: "Identificamos desbalance en H e I.", graphic: { atoms: [{symbol:'Pb', left:1, right:1}, {symbol:'I', left:1, right:2}, {symbol:'H', left:1, right:2}] } },
+                  { latex: String.raw`Pb + \mathbf{2}HI \rightarrow I_2 + PbH_2`, propertyText: "Ajuste Directo", robotSpeech: "Basta colocar un 2 en el ácido iodhídrico y queda todo listo.", graphic: { atoms: [{symbol:'Pb', left:1, right:1}, {symbol:'I', left:2, right:2}, {symbol:'H', left:2, right:2}], message: "Balanceada" } }
+              ]
+            },
+            { id: 16, title: "Ejercicio 16", subtitle: "Hierro + Ácido",
+              cardGradient: "from-pink-500/30 to-rose-600/30 border-pink-400", badgeColor: "bg-pink-500",
+              enunciado: () => <span>Balancea: <MathDisplay inline latex="Fe + HCl \rightarrow FeCl_2 + H_2" /></span>,
+              steps: [
+                  { latex: String.raw`Fe + HCl \rightarrow FeCl_2 + H_2`, propertyText: "Revisión", robotSpeech: "El cloro y el hidrógeno tienen 2 a la derecha.", graphic: { atoms: [{symbol:'Fe', left:1, right:1}, {symbol:'Cl', left:1, right:2}, {symbol:'H', left:1, right:2}] } },
+                  { latex: String.raw`Fe + \mathbf{2}HCl \rightarrow FeCl_2 + H_2`, propertyText: "Ajuste", robotSpeech: "Ponemos un 2 al ácido clorhídrico y el trabajo está hecho.", graphic: { atoms: [{symbol:'Fe', left:1, right:1}, {symbol:'Cl', left:2, right:2}, {symbol:'H', left:2, right:2}], message: "Balanceada" } }
+              ]
+            },
+            { id: 17, title: "Ejercicio 17", subtitle: "Síntesis",
+              cardGradient: "from-amber-500/30 to-orange-600/30 border-amber-400", badgeColor: "bg-amber-500",
+              enunciado: () => <span>Balancee e indique la suma de coeficientes: <MathDisplay inline latex="Sb + Cl_2 \rightarrow SbCl_3" /></span>,
+              steps: [
+                  { latex: String.raw`Sb + Cl_2 \rightarrow SbCl_3`, propertyText: "Cloro MCM", robotSpeech: "Tenemos Cl2 y Cl3. Usaremos el cruce (MCM=6).", graphic: { atoms: [{symbol:'Sb', left:1, right:1}, {symbol:'Cl', left:2, right:3}] } },
+                  { latex: String.raw`Sb + \mathbf{3}Cl_2 \rightarrow \mathbf{2}SbCl_3`, propertyText: "Cruzando Cloro", robotSpeech: "Ponemos 3 al Cl2 y 2 al compuesto.", graphic: { atoms: [{symbol:'Sb', left:1, right:2}, {symbol:'Cl', left:6, right:6}] } },
+                  { latex: String.raw`\mathbf{2}Sb + 3Cl_2 \rightarrow 2SbCl_3`, propertyText: "Antimonio", robotSpeech: "Ponemos 2 al Sb. La suma es 2+3+2 = 7.", graphic: { atoms: [{symbol:'Sb', left:2, right:2}, {symbol:'Cl', left:6, right:6}], message: "Suma = 7" } }
+              ]
+            },
+            { id: 18, title: "Ejercicio 18", subtitle: "Azufre",
+              cardGradient: "from-blue-600/30 to-indigo-700/30 border-blue-500", badgeColor: "bg-blue-600",
+              enunciado: () => <span>Balancee e indique la suma de coeficientes: <MathDisplay inline latex="S_8 + H_2 \rightarrow H_2S" /></span>,
+              steps: [
+                  { latex: String.raw`S_8 + H_2 \rightarrow \mathbf{8}H_2S`, propertyText: "Azufre", robotSpeech: "Igualamos el azufre colocando un 8 en los productos.", graphic: { atoms: [{symbol:'S', left:8, right:8}, {symbol:'H', left:2, right:16}] } },
+                  { latex: String.raw`S_8 + \mathbf{8}H_2 \rightarrow 8H_2S`, propertyText: "Hidrógeno", robotSpeech: "Balanceamos el hidrógeno. Suma: 1+8+8 = 17.", graphic: { atoms: [{symbol:'S', left:8, right:8}, {symbol:'H', left:16, right:16}], message: "Suma = 17" } }
+              ]
+            }
+        ];
+
+        const FloatingBackground = memo(() => {
+            const symbols = ['O', 'C', 'H', 'Fe', 'Al', 'Na', '+', '→', '='];
+            const elements = Array.from({ length: 30 }).map((_, i) => ({
+                id: i, symbol: symbols[Math.floor(Math.random() * symbols.length)], left: `${Math.random() * 100}%`,
+                animationDuration: `${10 + Math.random() * 15}s`, animationDelay: `-${Math.random() * 20}s`,
+                fontSize: `${1 + Math.random() * 3}rem`, opacity: 0.1 + Math.random() * 0.15
+            }));
+            return (
+                <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+                    {elements.map((el) => (
+                        <div key={el.id} className="absolute text-white font-black animate-floatUp select-none drop-shadow-lg" style={{ left: el.left, bottom: '-15%', fontSize: el.fontSize, opacity: el.opacity, animationDuration: el.animationDuration, animationDelay: el.animationDelay }}>
+                            {el.symbol}
+                        </div>
+                    ))}
+                </div>
+            );
+        });
+
+        const Confetti = memo(() => {
+            const colors = ['#fde047', '#60a5fa', '#f472b6', '#34d399', '#a78bfa', '#ff5722'];
+            const pieces = Array.from({ length: 120 }).map((_, i) => ({
+                id: i, left: `${50 + (Math.random() * 20 - 10)}%`, color: colors[Math.floor(Math.random() * colors.length)],
+                tx: `${(Math.random() - 0.5) * 800}px`, ty: `${(Math.random() - 1) * 800}px`, rot: `${Math.random() * 720}deg`, delay: `${Math.random() * 0.2}s`
+            }));
+            return (
+                <div className="absolute inset-0 pointer-events-none z-50 flex items-center justify-center overflow-hidden">
+                    {pieces.map((p) => (
+                        <div key={p.id} className="absolute w-4 h-4 sm:w-5 sm:h-5 rounded-full animate-confettiExplosion shadow-sm" style={{ backgroundColor: p.color, '--tx': p.tx, '--ty': p.ty, '--rot': p.rot, animationDelay: p.delay, left: p.left, top: '50%' }} />
+                    ))}
+                </div>
+            );
+        });
+
+        const RobotAssistant = ({ step, maxSteps }) => {
+            const isFinalStep = step >= maxSteps;
+            const isThinking = step === maxSteps - 1;
+
+            const getContainerAnim = () => { if (isFinalStep) return 'animate-robotJump'; if (isThinking) return 'animate-robotThinkTilt'; return 'animate-robotFloat'; };
+            const getArmLAnim = () => { if (isFinalStep) return 'rotate-[150deg] animate-pulse'; if (step > 0) return 'animate-robotTalkArmL'; return 'rotate-45'; };
+            const getArmRAnim = () => { if (isFinalStep) return '-rotate-[150deg] animate-pulse'; if (step > 0) return 'animate-robotTalkArmR'; return '-rotate-45'; };
+            
+            const getEyes = () => {
+                if (isFinalStep) return <div className="w-full flex justify-between px-1"><div className="w-2.5 h-1.5 bg-emerald-400 rounded-t-full mt-0.5"></div><div className="w-2.5 h-1.5 bg-emerald-400 rounded-t-full mt-0.5"></div></div>;
+                if (step === 0) return <div className="w-full flex justify-between px-1.5"><div className="w-2 h-2 bg-cyan-400 rounded-full animate-pulse"></div><div className="w-2 h-2 bg-cyan-400 rounded-full animate-pulse"></div></div>;
+                return <div className="w-full flex justify-between px-1"><div className="w-2.5 h-2.5 bg-yellow-400 rounded-full animate-bounce"></div><div className="w-2.5 h-2.5 bg-yellow-400 rounded-full animate-bounce"></div></div>;
+            };
+            const getMouth = () => {
+                if (isFinalStep) return <div className="w-4 h-2.5 bg-rose-400 rounded-b-full mt-1"></div>;
+                if (step === 0) return <div className="w-3 h-1 bg-cyan-300 rounded-full mt-1"></div>;
+                return <div className="w-2.5 h-2.5 bg-rose-400 rounded-full mt-1 animate-ping"></div>;
+            };
+
+            return (
+                <div className={`relative flex flex-col items-center drop-shadow-xl select-none ${getContainerAnim()}`}>
+                    <div className="relative z-0 flex flex-col items-center translate-y-1">
+                        <div className={`w-2.5 h-2.5 rounded-full shadow-[0_0_10px_currentColor] z-10 transition-colors duration-300 ${isFinalStep ? 'text-emerald-400 bg-emerald-400' : 'text-yellow-400 bg-yellow-400 animate-pulse'}`}></div>
+                        <div className="w-1.5 h-3 bg-slate-300"></div>
+                    </div>
+                    <div className="relative z-10 w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-white to-slate-200 rounded-xl border-[2.5px] border-indigo-400 shadow-xl flex flex-col items-center justify-center p-1">
+                        <div className="w-full h-full bg-slate-900 rounded-lg flex flex-col items-center justify-center p-1 shadow-inner border-[1.5px] border-indigo-500">
+                            {getEyes()} {getMouth()}
+                        </div>
+                    </div>
+                    <div className={`absolute top-1/2 -left-1.5 w-2 h-4 bg-slate-200 border-[2px] border-indigo-400 rounded-full z-0 origin-top ${getArmLAnim()}`}></div>
+                    <div className={`absolute top-1/2 -right-1.5 w-2 h-4 bg-slate-200 border-[2px] border-indigo-400 rounded-full z-0 origin-top ${getArmRAnim()}`}></div>
+                </div>
+            );
+        };
+
+        function App() {
+            const [view, setView] = useState('home');
+            const [exIdx, setExIdx] = useState(0);
+            const [step, setStep] = useState(0);
+            const [isMuted, setIsMuted] = useState(false);
+            const scrollContainerRef = useRef(null);
+
+            const curEx = EXERCISES[exIdx];
+            const maxSteps = curEx.steps.length - 1;
+            const curStepData = curEx.steps[step];
+            const EnunciadoText = curEx.enunciado;
+
+            const handleInteraction = () => { AudioController.init(); AudioController.startBGM(); };
+
+            const getCurrentGraphic = () => {
+                let graphic = null;
+                for (let i = step; i >= 0; i--) { if (curEx.steps[i].graphic) { graphic = curEx.steps[i].graphic; break; } }
+                return graphic;
+            };
+
+            const startExercise = (index) => {
+                handleInteraction(); AudioController.play('swoosh');
+                setExIdx(index); setStep(0); setView('lab');
+            };
+
+            const nextStep = () => {
+                handleInteraction();
+                if (step < maxSteps) {
+                    const next = step + 1; setStep(next);
+                    AudioController.play(next === maxSteps ? 'success' : 'pop');
+                } else {
+                    AudioController.play('swoosh');
+                    if (exIdx < EXERCISES.length - 1) { setExIdx(exIdx + 1); setStep(0); } else { setView('home'); }
+                }
+            };
+
+            const prevStep = () => {
+                handleInteraction();
+                if (step > 0) { setStep(step - 1); AudioController.play('pop-reverse'); }
+            };
+
+            const toggleMute = () => { handleInteraction(); setIsMuted(AudioController.toggleMute()); };
+
+            useEffect(() => {
+                if(scrollContainerRef.current) scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+            }, [step, exIdx, view]);
+
+            if (view === 'home') {
+                return (
+                    <div className="w-screen min-h-[100dvh] bg-gradient-to-br from-[#1e3a8a] via-[#4338ca] to-[#be185d] flex flex-col items-center justify-start p-4 sm:p-6 relative font-fun overflow-y-auto scrollbar-hide">
+                        <FloatingBackground />
+                        
+                        <div className="w-[96%] max-w-[1400px] z-20 flex items-center justify-between mb-8 sm:mb-12 mt-2">
+                            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl border-2 border-yellow-300 bg-white/15 backdrop-blur-md text-yellow-300 font-black tracking-wider uppercase shadow-md text-sm sm:text-base">
+                                <Rocket className="w-5 h-5 text-yellow-300" /> TuProfe20 Lab
+                            </div>
+                            <button onClick={toggleMute} className="p-2 sm:p-3 rounded-2xl bg-white/20 border-2 border-white/30 backdrop-blur-md text-white hover:bg-white/30 transition-all active:scale-95">
+                                {isMuted ? <VolumeX className="w-5 h-5 sm:w-6 sm:h-6" /> : <Volume2 className="w-5 h-5 sm:w-6 sm:h-6" />}
+                            </button>
+                        </div>
+
+                        <div className="relative z-10 text-center w-[96%] max-w-[1400px] flex flex-col items-center">
+                            <h1 className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black text-white mb-3 sm:mb-5 drop-shadow-[0_6px_0_rgba(0,0,0,0.3)] tracking-tight leading-none uppercase">
+                                Balanceo de <span className="text-yellow-300 underline decoration-wavy decoration-cyan-400">Ecuaciones</span>
+                            </h1>
+                            <p className="text-base sm:text-xl lg:text-2xl text-purple-100 mb-8 sm:mb-12 font-bold max-w-3xl leading-relaxed">
+                                ¡Aprende a balancear átomos reactantes y productos paso a paso! ⚛️🤖
+                            </p>
+
+                            <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 sm:gap-6 mb-12">
+                                {EXERCISES.map((ex, idx) => (
+                                    <button
+                                        key={ex.id}
+                                        onClick={() => startExercise(idx)}
+                                        className="group text-left p-4 sm:p-5 rounded-[1.5rem] bg-gradient-to-br bg-opacity-90 backdrop-blur-xl border-[3px] border-white/40 hover:-translate-y-2 hover:shadow-[0_15px_30px_rgba(0,0,0,0.3)] transition-all flex flex-col relative overflow-hidden shadow-lg min-h-[10rem] sm:min-h-[12rem]"
+                                        style={{ backgroundImage: `linear-gradient(to bottom right, var(--tw-gradient-stops))` }}
+                                    >
+                                        <div className={`absolute inset-0 opacity-80 ${ex.cardGradient}`}></div>
+                                        <div className="relative z-10 flex-1 flex flex-col">
+                                            <div className="flex items-center justify-between mb-3">
+                                                <span className={`${ex.badgeColor} text-white text-xs sm:text-sm font-black px-3 py-1 rounded-md uppercase tracking-widest shadow-sm shrink-0`}>
+                                                    Reto {ex.id}
+                                                </span>
+                                                <span className="bg-black/20 text-white text-xs font-bold px-2 py-1 rounded-md">
+                                                    {ex.steps.length} pasos
+                                                </span>
+                                            </div>
+                                            <div className="flex-1 my-2 bg-white/95 rounded-xl p-3 text-slate-900 shadow-inner overflow-hidden flex items-center justify-center border border-white/60 w-full pointer-events-none math-card">
+                                                <MathDisplay latex={ex.steps[0].latex} />
+                                            </div>
+                                            <div className="text-white text-xs sm:text-sm font-black text-center mt-2 drop-shadow-md">
+                                                {ex.subtitle}
+                                            </div>
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="w-screen h-[100dvh] bg-gradient-to-br from-[#0f172a] via-[#312e81] to-[#831843] text-slate-800 flex flex-col p-2 sm:p-4 relative font-fun overflow-hidden">
+                    <FloatingBackground />
+                    {step === maxSteps && <Confetti />}
+
+                    {/* Navbar InGame */}
+                    <div className="shrink-0 relative z-10 w-[96%] max-w-[1400px] mx-auto flex justify-between items-center mb-3 sm:mb-4 px-1">
+                        <button onClick={() => { AudioController.play('swoosh'); setView('home'); }} className="flex items-center justify-center px-4 py-2 sm:px-5 sm:py-2.5 rounded-[1rem] sm:rounded-[1.2rem] bg-white/10 border-[3px] border-white/30 backdrop-blur-md text-white font-black hover:bg-white/20 transition-all shadow-lg active:scale-95 text-sm sm:text-base hover:scale-105">
+                            <Home className="w-5 h-5 sm:mr-2" />
+                            <span className="hidden sm:inline">Portada</span>
+                        </button>
+
+                        <div className="flex items-center gap-1.5 sm:gap-2 bg-black/30 p-1.5 sm:p-2 rounded-[1rem] sm:rounded-[1.2rem] border-2 border-white/20 backdrop-blur-md shadow-lg overflow-x-auto scrollbar-hide max-w-[50vw]">
+                            {EXERCISES.map((ex, i) => (
+                                <button
+                                    key={ex.id}
+                                    onClick={() => startExercise(i)}
+                                    className={`shrink-0 w-8 h-8 sm:w-11 sm:h-11 rounded-[0.8rem] sm:rounded-[1rem] font-black text-sm sm:text-base transition-all ${exIdx === i ? 'bg-yellow-400 text-slate-900 scale-110 shadow-[0_0_15px_rgba(250,204,21,0.6)]' : 'text-white hover:bg-white/20'}`}
+                                >
+                                    {ex.id}
+                                </button>
+                            ))}
+                        </div>
+
+                        <button onClick={toggleMute} className="p-2 sm:p-3 rounded-[1rem] sm:rounded-[1.2rem] bg-white/10 border-[3px] border-white/30 text-white hover:bg-white/20 transition-all shadow-lg active:scale-95 hover:scale-105">
+                            {isMuted ? <VolumeX className="w-5 h-5 sm:w-6 sm:h-6" /> : <Volume2 className="w-5 h-5 sm:w-6 sm:h-6" />}
+                        </button>
+                    </div>
+
+                    <div className="flex-1 min-h-0 relative z-10 w-[96%] max-w-[1400px] mx-auto bg-white rounded-[2rem] sm:rounded-[2.5rem] border-[6px] sm:border-[8px] border-slate-100 shadow-[0_30px_60px_rgba(0,0,0,0.5)] flex flex-col overflow-hidden">
+                        
+                        {/* Enunciado Area */}
+                        <div className="shrink-0 bg-slate-900 border-b-[4px] border-cyan-500 px-4 py-3 sm:px-6 flex flex-col justify-center relative shadow-md z-20">
+                            <div className="flex justify-between items-center w-full max-w-5xl mx-auto mb-2">
+                                <span className="bg-cyan-500 text-slate-900 font-black text-xs sm:text-sm px-3 py-1 rounded-md uppercase tracking-widest shadow-sm">
+                                    {curEx.title}
+                                </span>
+                                <span className="text-yellow-300 font-bold text-xs sm:text-sm bg-white/10 px-3 py-1 rounded-md">
+                                    {curEx.subtitle}
+                                </span>
+                            </div>
+                            <div className="flex flex-col items-center justify-center text-white font-bold text-lg sm:text-xl md:text-2xl text-center w-full max-w-5xl mx-auto leading-relaxed math-enunciado">
+                                <EnunciadoText />
+                            </div>
+                        </div>
+
+                        {/* División 2 Columnas (Resolución y Gráfico) */}
+                        <div className="flex-1 flex flex-col md:flex-row bg-slate-50 overflow-hidden relative">
+                            
+                            {/* IZQUIERDA: Procedimiento Paso a Paso */}
+                            <div ref={scrollContainerRef} className="w-full md:w-1/2 flex-1 p-4 sm:p-6 overflow-y-auto scrollbar-hide flex flex-col space-y-6 pb-24 relative z-10 border-r-2 border-slate-200/50">
+                                <div className="absolute inset-0 opacity-[0.03] bg-[radial-gradient(#000_2px,transparent_2px)] [background-size:20px_20px] pointer-events-none"></div>
+                                
+                                {curEx.steps.slice(0, step + 1).map((s, idx) => (
+                                    <div key={`${exIdx}-${idx}`} className={`w-full flex flex-col transition-all duration-300 ${idx === step ? 'opacity-100 scale-100 animate-slideInRight' : 'opacity-60 scale-[0.98]'}`}>
+                                        <div className="mb-2 shrink-0 animate-jellyPop z-20 self-start">
+                                            <span className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full font-black text-xs sm:text-sm shadow-sm border-[2px] ${idx === step ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white border-cyan-300' : 'bg-slate-200 text-slate-500 border-slate-300'}`}>
+                                                {idx === step && <Sparkles className="w-4 h-4" />} 
+                                                <span>{s.propertyText}</span>
+                                            </span>
+                                        </div>
+                                        
+                                        <div className={`px-4 py-3 sm:px-6 sm:py-4 w-full text-left rounded-2xl flex items-center justify-start min-h-[4rem] overflow-x-auto scrollbar-hide ${idx === step ? (step === maxSteps ? 'bg-[#fde047] border-[3px] border-[#eab308] shadow-md math-current' : 'bg-white border-[3px] border-cyan-400 shadow-md math-current') : 'bg-white/70 border-[2px] border-slate-200 math-history'}`}>
+                                            <MathDisplay latex={s.latex} />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* DERECHA: Zona Gráfica (Tabla de Átomos Reactiva) */}
+                            <div className="w-full md:w-1/2 bg-transparent p-4 sm:p-6 flex flex-col items-center justify-center relative z-10 pointer-events-none">
+                                <h3 className="absolute top-4 left-4 font-black text-slate-400 uppercase tracking-widest text-xs sm:text-sm flex items-center gap-1 z-20">
+                                    <Activity className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-400"/> Tabla de Átomos
+                                </h3>
+                                <div className="w-full h-full bg-white border-[3px] border-dashed border-slate-200 rounded-[2rem] p-2 sm:p-4 flex items-center justify-center shadow-lg relative overflow-hidden pointer-events-auto">
+                                    <AtomBalance config={getCurrentGraphic()} />
+                                </div>
+                            </div>
+
+                            {/* DIBUJO GLOBAL (Pizarra intacta) */}
+                            <DrawingCanvas />
+                        </div>
+
+                        {/* Zona Inferior: Robot y Feedback */}
+                        <div className="shrink-0 bg-white w-full px-4 py-2 sm:px-8 sm:py-3 flex items-center gap-4 sm:gap-6 border-t-[4px] border-slate-100 z-30 relative shadow-[0_-10px_20px_rgba(0,0,0,0.05)]">
+                            <div className="shrink-0 absolute -top-10 sm:relative sm:-top-0 left-4 sm:left-0 drop-shadow-xl z-50">
+                                <RobotAssistant step={step} maxSteps={maxSteps} />
+                            </div>
+                            <div className="flex-1 text-xs sm:text-sm md:text-base font-bold text-slate-700 leading-snug sm:leading-relaxed bg-blue-50/80 p-2 sm:p-3 rounded-[1rem] border-2 border-blue-100 min-h-[3rem] flex items-center shadow-sm ml-[3.5rem] sm:ml-0">
+                                <div key={`speech-${exIdx}-${step}`} className="animate-slideInRight w-full">
+                                    {curStepData.robotSpeech}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Controles Nav */}
+                        <div className="shrink-0 bg-gradient-to-b from-[#e0e7ff] to-[#c7d2fe] p-2 sm:p-3 w-full flex flex-col items-center border-t-[4px] border-white z-40">
+                            <div className="flex justify-center items-stretch w-full max-w-4xl gap-2 sm:gap-4 h-8 sm:h-10">
+                                <button onClick={prevStep} disabled={step === 0} className="flex-[0.8] bg-[#a5b4fc] border-b-[4px] border-[#6366f1] text-[#312e81] rounded-l-xl font-black text-xs sm:text-sm flex items-center justify-center gap-1 active:border-b-0 active:translate-y-[4px] disabled:opacity-40 transition-all hover:bg-[#c7d2fe]">
+                                    <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 stroke-[3px]" />
+                                    <span className="hidden sm:inline">Atrás</span>
+                                </button>
+                                <div className="bg-[#6366f1] text-white font-black px-2 sm:px-4 text-xs sm:text-sm flex items-center justify-center border-b-[4px] border-[#4338ca] shadow-inner whitespace-nowrap min-w-[3rem]">
+                                    Paso {step + 1}/{maxSteps + 1}
+                                </div>
+                                <button onClick={nextStep} className={`flex-[2] border-b-[4px] text-white rounded-r-xl font-black text-xs sm:text-sm flex items-center justify-center gap-1 active:border-b-0 active:translate-y-[4px] transition-all shadow-sm hover:brightness-110 ${step === maxSteps ? 'bg-gradient-to-r from-[#10b981] to-[#047857] border-[#065f46] animate-pulse' : 'bg-gradient-to-r from-[#06b6d4] to-[#0284c7] border-[#0369a1]'}`}>
+                                    <span>{step < maxSteps ? '¡Siguiente Paso!' : exIdx < EXERCISES.length - 1 ? `Siguiente Reto` : '¡Volver!'}</span>
+                                    <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 stroke-[3px]" />
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
